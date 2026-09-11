@@ -34,12 +34,22 @@ def run_cli():
                 print("-" * 40 + "\n")
                 continue
 
+            # input_messages = [HumanMessage(content=user_input)]
+            # for chunk in task_manager_agent.stream({"messages": input_messages}, config, stream_mode="values"):
+            #     last_msg = chunk["messages"][-1]
+            
+            # # Print only final response
+            # print(f"\nAssistant > {last_msg.content}\n")
+
+
             input_messages = [HumanMessage(content=user_input)]
+            final_content = ""
             for chunk in task_manager_agent.stream({"messages": input_messages}, config, stream_mode="values"):
                 last_msg = chunk["messages"][-1]
-            
-            # Print only final response
-            print(f"\nAssistant > {last_msg.content}\n")
+                if getattr(last_msg, "content", None) and not getattr(last_msg, "tool_calls", None):
+                    final_content = last_msg.content
+
+            print(f"\nAssistant > {final_content}\n")
 
         except (KeyboardInterrupt, EOFError):
             print("\nExiting.")
