@@ -19,14 +19,17 @@ model = get_model()
 def my_task_manager(state: MessagesState, config: RunnableConfig, store: BaseStore):
     user_id = config["configurable"]["user_id"]
 
+    # 1. Retrieve profile memory
     namespace = ("profile", user_id)
     memories = store.search(namespace)
     user_profile = memories[0].value if memories else None
 
+    # 2. Retrieve task memory
     namespace = ("todo", user_id)
     memories = store.search(namespace)
     todo = "\n".join(f"{mem.value}" for mem in memories)
 
+    # 3. Retrieve custom instructions
     namespace = ("instructions", user_id)
     memories = store.search(namespace)
     instructions = memories[0].value.get("memory", "") if memories else ""
@@ -37,10 +40,44 @@ def my_task_manager(state: MessagesState, config: RunnableConfig, store: BaseSto
         instructions=instructions
     )
 
-    response = model.bind_tools([UpdateMemory], parallel_tool_calls=False).invoke(
-        [SystemMessage(content=sys_msg)] + state["messages"]
-    )
+    # If the preceding message is a ToolMessage, memory has already been updated.
+    # We call the model directly (unbound) to generate the natural response.
+    last_msg = state["messages"][-1]
+    if isinstance(last_msg, ToolMessage):
+        response = model.invoke([SystemMessage(content=sys_msg)] + state["messages"])
+    else:
+        # First pass on user input: allow the model to call UpdateMemory
+        response = model.bind_tools([UpdateMemory], parallel_tool_calls=False).invoke(
+            [SystemMessage(content=sys_msg)] + state["messages"]
+        )
+
     return {"messages": [response]}
+
+# def my_task_manager(state: MessagesState, config: RunnableConfig, store: BaseStore):
+#     user_id = config["configurable"]["user_id"]
+
+#     namespace = ("profile", user_id)
+#     memories = store.search(namespace)
+#     user_profile = memories[0].value if memories else None
+
+#     namespace = ("todo", user_id)
+#     memories = store.search(namespace)
+#     todo = "\n".join(f"{mem.value}" for mem in memories)
+
+#     namespace = ("instructions", user_id)
+#     memories = store.search(namespace)
+#     instructions = memories[0].value.get("memory", "") if memories else ""
+
+#     sys_msg = MODEL_SYSTEM_MESSAGE.format(
+#         user_profile=user_profile,
+#         todo=todo,
+#         instructions=instructions
+#     )
+
+#     response = model.bind_tools([UpdateMemory], parallel_tool_calls=False).invoke(
+#         [SystemMessage(content=sys_msg)] + state["messages"]
+#     )
+#     return {"messages": [response]}
 
 def route_messages(state: MessagesState, config: RunnableConfig, store: BaseStore) -> Literal[END, "update_profile", "update_todos", "update_instructions"]:
     last_message = state["messages"][-1]
