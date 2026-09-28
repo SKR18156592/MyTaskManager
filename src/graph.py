@@ -112,7 +112,9 @@ def update_profile(state: MessagesState, config: RunnableConfig, store: BaseStor
         "messages": updated_messages,
         "existing": existing_memories
     })
+    print("profile: ",result)
 
+    
     for r, rmeta in zip(result["responses"], result["response_metadata"]):
         store.put(namespace, rmeta.get("json_doc_id", str(uuid.uuid4())), r.model_dump(mode="json"))
 
@@ -142,7 +144,7 @@ def update_todos(state: MessagesState, config: RunnableConfig, store: BaseStore)
         "messages": updated_messages,
         "existing": existing_memories
     })
-
+    print("todo:",result)
     for r, rmeta in zip(result["responses"], result["response_metadata"]):
         store.put(namespace, rmeta.get("json_doc_id", str(uuid.uuid4())), r.model_dump(mode="json"))
 
@@ -189,8 +191,19 @@ builder.add_edge("update_profile", "my_task_manager")
 builder.add_edge("update_todos", "my_task_manager")
 builder.add_edge("update_instructions", "my_task_manager")
 
-across_thread_memory = InMemoryStore()
-within_thread_memory = MemorySaver()
+import sqlite3
+conn1=sqlite3.connect("src/state_db/short_term.db",check_same_thread=False)
+conn2=sqlite3.connect("src/state_db/long_term.db",check_same_thread=False,isolation_level=None)
+
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.store.sqlite import SqliteStore
+
+within_thread_memory=SqliteSaver(conn1)
+across_thread_memory = SqliteStore(conn2)
+
+
+# across_thread_memory = InMemoryStore()
+# within_thread_memory = MemorySaver()
 
 task_manager_agent = builder.compile(
     checkpointer=within_thread_memory,

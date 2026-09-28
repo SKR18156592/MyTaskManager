@@ -29,7 +29,8 @@ def run_cli():
                 for m in across_thread_memory.search(("todo", user_id)):
                     print(m.value)
                 print(f"\n--- [Custom Instructions: {user_id}] ---")
-                for m in across_thread_memory.search(("instructions", user_id)):
+                for m in across_thread_memory.search(("ins"
+                "tructions", user_id)):
                     print(m.value)
                 print("-" * 40 + "\n")
                 continue

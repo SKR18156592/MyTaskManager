@@ -14,6 +14,7 @@ class MemoryCollection(BaseModel):
 class Profile(BaseModel):
     """Profile representation of the user."""
     name: Optional[str] = Field(description="The user's name", default=None)
+    age: Optional[str] = Field(description="The user's age", default=None)
     location: Optional[str] = Field(description="The user's location", default=None)
     job: Optional[str] = Field(description="The user's job", default=None)
     connections: list[str] = Field(
